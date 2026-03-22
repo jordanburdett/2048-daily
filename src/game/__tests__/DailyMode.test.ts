@@ -15,7 +15,7 @@ import {
 } from '../DailyChallenge'
 import type { DailyResult } from '../DailyChallenge'
 import { GameEngine } from '../GameEngine'
-import { Direction, GameStatus } from '../types'
+import { Direction } from '../types'
 
 // Mock localStorage
 const store: Record<string, string> = {}
