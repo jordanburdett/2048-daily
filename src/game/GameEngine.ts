@@ -135,10 +135,10 @@ export class GameEngine {
 
     if (newScore > this.state.bestScore) {
       newBestScore = newScore
-      safeSetItem(CLASSIC_BEST_KEY, String(newBestScore))
+      if (!this.state.isDaily) safeSetItem(CLASSIC_BEST_KEY, String(newBestScore))
     }
     if (newBestTile > this.state.bestTile) {
-      safeSetItem(CLASSIC_BEST_TILE_KEY, String(newBestTile))
+      if (!this.state.isDaily) safeSetItem(CLASSIC_BEST_TILE_KEY, String(newBestTile))
     }
 
     this.state = {

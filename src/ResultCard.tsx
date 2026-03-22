@@ -34,19 +34,17 @@ export default function ResultCard({ result, onPlayClassic }: ResultCardProps) {
 
   useEffect(() => {
     if (emojis.length === 0) return
-    // Start revealing after 400ms initial delay, then 250ms between each
     let current = 0
+    let handle: ReturnType<typeof setTimeout>
     const reveal = () => {
       current++
       setRevealedCount(current)
       if (current < emojis.length) {
-        setTimeout(reveal, 250)
+        handle = setTimeout(reveal, 250)
       }
     }
-    const initialTimer = setTimeout(reveal, 400)
-    return () => {
-      clearTimeout(initialTimer)
-    }
+    handle = setTimeout(reveal, 400)
+    return () => clearTimeout(handle)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result.emojiCard])
 

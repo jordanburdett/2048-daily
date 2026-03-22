@@ -13,7 +13,6 @@ import {
 } from './game/DailyChallenge'
 import type { DailyResult } from './game/DailyChallenge'
 import { GameEngine } from './game/GameEngine'
-import { GameStatus } from './game/types'
 import type { GameState } from './game/types'
 
 type Mode = 'select' | 'classic' | 'daily' | 'daily-result'
@@ -140,5 +139,3 @@ export default function App() {
   )
 }
 
-// Re-export GameStatus for use in GameBoard without circular import
-export { GameStatus }
