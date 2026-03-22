@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ModeSelect from './ModeSelect'
 import GameBoard from './GameBoard'
 import ResultCard from './ResultCard'
@@ -14,6 +14,7 @@ import {
 import type { DailyResult } from './game/DailyChallenge'
 import { GameEngine } from './game/GameEngine'
 import { AudioEngine } from './utils/AudioEngine'
+import { GameStatus } from './game/types'
 import type { GameState } from './game/types'
 
 type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold'
@@ -46,6 +47,31 @@ export default function App() {
   // Blindfold mode state
   const [revealsRemaining, setRevealsRemaining] = useState(3)
   const [isRevealing, setIsRevealing] = useState(false)
+  const [autoRevealCountdown, setAutoRevealCountdown] = useState(30)
+
+  // Keep a stable ref to setIsRevealing so it's safe to call inside the
+  // setAutoRevealCountdown functional updater without creating a stale closure.
+  const setIsRevealingRef = useRef(setIsRevealing)
+  useEffect(() => { setIsRevealingRef.current = setIsRevealing }, [setIsRevealing])
+
+  // Auto-reveal: every 30 s while in Blindfold mode with game PLAYING,
+  // automatically show all tiles for 2 s (does not consume manual reveal count).
+  useEffect(() => {
+    if (mode !== 'blindfold') return
+    const interval = setInterval(() => {
+      // Only fire the reveal when the game is still in progress.
+      if (engine.getState().status !== GameStatus.PLAYING) return
+      setAutoRevealCountdown(prev => {
+        if (prev <= 1) {
+          setIsRevealingRef.current(true)
+          setTimeout(() => setIsRevealingRef.current(false), 2000)
+          return 30
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [mode, engine])
 
   // Read best score directly during render — localStorage is synchronous and safe here
   const classicBest = mode === 'select' ? getClassicBest() : 0
@@ -55,6 +81,7 @@ export default function App() {
     engine.setBlindMode(true)
     setRevealsRemaining(3)
     setIsRevealing(true)
+    setAutoRevealCountdown(30)
     setTimeout(() => setIsRevealing(false), 1500)
     setMode('blindfold')
   }
@@ -62,6 +89,7 @@ export default function App() {
   const handleReveal = () => {
     setRevealsRemaining(r => r - 1)
     setIsRevealing(true)
+    setAutoRevealCountdown(30)
     setTimeout(() => setIsRevealing(false), 2000)
   }
 
@@ -141,7 +169,7 @@ export default function App() {
         hideNumbers={hideNumbers}
         revealButton={
           mode === 'blindfold'
-            ? { revealsRemaining, isRevealing, onReveal: handleReveal }
+            ? { revealsRemaining, isRevealing, onReveal: handleReveal, autoRevealCountdown }
             : undefined
         }
         boardGlow={mode === 'blindfold' && isRevealing}

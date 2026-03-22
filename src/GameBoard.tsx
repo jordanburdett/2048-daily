@@ -74,6 +74,7 @@ interface RevealButtonProps {
   revealsRemaining: number
   isRevealing: boolean
   onReveal: () => void
+  autoRevealCountdown: number
 }
 
 interface GameBoardProps {
@@ -320,18 +321,23 @@ export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver
             Undo
           </button>
           {revealButton && gameState.status === GameStatus.PLAYING && (
-            <button
-              style={{
-                ...styles.actionBtn,
-                background: '#6c3483',
-                opacity: revealButton.revealsRemaining === 0 || revealButton.isRevealing ? 0.4 : 1,
-              }}
-              onClick={revealButton.onReveal}
-              disabled={revealButton.revealsRemaining === 0 || revealButton.isRevealing}
-              aria-label={`Reveal tiles — ${revealButton.revealsRemaining} left`}
-            >
-              Reveal ({revealButton.revealsRemaining} left)
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <button
+                style={{
+                  ...styles.actionBtn,
+                  background: '#6c3483',
+                  opacity: revealButton.revealsRemaining === 0 || revealButton.isRevealing ? 0.4 : 1,
+                }}
+                onClick={revealButton.onReveal}
+                disabled={revealButton.revealsRemaining === 0 || revealButton.isRevealing}
+                aria-label={`Reveal tiles — ${revealButton.revealsRemaining} left`}
+              >
+                Reveal ({revealButton.revealsRemaining} left)
+              </button>
+              <span style={styles.autoRevealHint}>
+                Auto: {revealButton.autoRevealCountdown}s
+              </span>
+            </div>
           )}
         </div>
 
@@ -628,5 +634,10 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#6b6b8a',
     fontSize: '0.85rem',
     marginTop: '12px',
+  },
+  autoRevealHint: {
+    color: '#888',
+    fontSize: '0.75rem',
+    lineHeight: 1,
   },
 }
