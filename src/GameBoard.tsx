@@ -37,23 +37,15 @@ interface GameBoardProps {
 }
 
 export default function GameBoard({ mode, onBack }: GameBoardProps) {
-  // Store engine in a stable ref; state is the React-visible snapshot.
-  // The engine is initialized once per mount via useState initial value.
-  const [gameState, setGameState] = useState<GameState>(() => {
-    const eng = new GameEngine()
-    eng.newGame()
-    return eng.getState()
-  })
-
-  // Hold the engine instance across renders via a module-level WeakMap keyed on component fiber.
-  // Simpler: store engine directly in a ref, but initialize it synchronously here using
-  // an immediately-initialized ref pattern that bypasses the lint rule by not reading .current
-  // during render — we only set it once.
-  const engineHolder = useState<GameEngine>(() => {
+  // Single engine instance — both useState calls use the same object.
+  // The first initializer creates the engine; the second reads its initial state.
+  // Neither reads a ref during render, satisfying the react-hooks/refs lint rule.
+  const [engineHolder] = useState<GameEngine>(() => {
     const eng = new GameEngine()
     eng.newGame()
     return eng
-  })[0]  // [0] = stable value, no setter
+  })
+  const [gameState, setGameState] = useState<GameState>(() => engineHolder.getState())
 
   const syncState = useCallback(() => {
     setGameState(engineHolder.getState())
