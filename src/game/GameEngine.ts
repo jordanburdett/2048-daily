@@ -279,6 +279,17 @@ function processLine(
     }
   }
 
+  // Map merged positions to final packed indices BEFORE second compact.
+  // After merges, arr has zeros where source tiles were consumed.
+  // Count non-zero values before each merged position to get the post-compact index.
+  const mergedPackedIndices: number[] = mergedCompacted.map(compactIdx => {
+    let packedIdx = 0
+    for (let j = 0; j < compactIdx; j++) {
+      if (arr[j] !== 0) packedIdx++
+    }
+    return packedIdx
+  })
+
   // Compact again after merge
   arr = compact(arr)
 
@@ -288,13 +299,10 @@ function processLine(
   const result = reverse ? arr.reverse() : arr
   const moved = result.some((v, i) => v !== original[i])
 
-  // Map compacted merge indices back to result indices.
-  // After second compact + pad, the merged tile is at position compactIdx in
-  // the left-packed array (length 4). When reversed, position compactIdx
-  // becomes (3 - compactIdx) in the final result.
-  const mergedInResult: number[] = mergedCompacted.map(compactIdx => {
-    if (reverse) return 3 - compactIdx
-    return compactIdx
+  // Map packed indices to final result indices (accounting for reversal).
+  const mergedInResult: number[] = mergedPackedIndices.map(packedIdx => {
+    if (reverse) return 3 - packedIdx
+    return packedIdx
   })
 
   return { result, score, moved, mergedIndices: mergedInResult }
