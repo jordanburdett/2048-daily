@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getChallengeNumber, loadDailyResult } from './game/DailyChallenge'
 
 // ---------------------------------------------------------------------------
@@ -13,9 +13,9 @@ const COLOR_LEGEND: Array<{ value: number; name: string; bg: string; fg: string 
   { value: 64,   name: 'Red',         bg: '#F65E3B', fg: '#F9F6F2' },
   { value: 128,  name: 'Amber',       bg: '#EDCF72', fg: '#F9F6F2' },
   { value: 256,  name: 'Gold',        bg: '#EDCC61', fg: '#F9F6F2' },
-  { value: 512,  name: 'Deep Gold',   bg: '#9B2335', fg: '#F9F6F2' },
+  { value: 512,  name: 'Crimson',      bg: '#9B2335', fg: '#F9F6F2' },
   { value: 1024, name: 'Forest Green',bg: '#27622A', fg: '#F9F6F2' },
-  { value: 2048, name: 'Deep Green',  bg: '#1C3461', fg: '#F9F6F2' },
+  { value: 2048, name: 'Navy Blue',   bg: '#1C3461', fg: '#F9F6F2' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -23,6 +23,24 @@ const COLOR_LEGEND: Array<{ value: number; name: string; bg: string; fg: string 
 // ---------------------------------------------------------------------------
 function ColorLegend() {
   const [open, setOpen] = useState(false)
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open])
+
+  // Move focus to the close button when dialog opens
+  useEffect(() => {
+    if (open) {
+      closeBtnRef.current?.focus()
+    }
+  }, [open])
 
   return (
     <>
@@ -67,6 +85,7 @@ function ColorLegend() {
               ))}
             </ul>
             <button
+              ref={closeBtnRef}
               style={legendStyles.closeBtn}
               onClick={() => setOpen(false)}
               aria-label="Close color legend"

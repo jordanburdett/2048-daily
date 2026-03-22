@@ -75,9 +75,9 @@ const COLOR_LEGEND: Array<{ value: number; name: string; bg: string; fg: string 
   { value: 64,   name: 'Red',          bg: '#F65E3B', fg: '#F9F6F2' },
   { value: 128,  name: 'Amber',        bg: '#EDCF72', fg: '#F9F6F2' },
   { value: 256,  name: 'Gold',         bg: '#EDCC61', fg: '#F9F6F2' },
-  { value: 512,  name: 'Deep Gold',    bg: '#9B2335', fg: '#F9F6F2' },
+  { value: 512,  name: 'Crimson',       bg: '#9B2335', fg: '#F9F6F2' },
   { value: 1024, name: 'Forest Green', bg: '#27622A', fg: '#F9F6F2' },
-  { value: 2048, name: 'Deep Green',   bg: '#1C3461', fg: '#F9F6F2' },
+  { value: 2048, name: 'Navy Blue',    bg: '#1C3461', fg: '#F9F6F2' },
 ]
 
 // TILE_COLORS mirror (from ResultCard.tsx) — must match COLOR_LEGEND bg/fg
@@ -238,10 +238,10 @@ describe('COLOR_LEGEND correctness', () => {
     expect(COLOR_LEGEND.map(e => e.value)).toEqual(expectedValues)
   })
 
-  it('512 tile maps to "Deep Gold" (#9B2335)', () => {
+  it('512 tile maps to "Crimson" (#9B2335)', () => {
     const entry = COLOR_LEGEND.find(e => e.value === 512)
     expect(entry).toBeDefined()
-    expect(entry!.name).toBe('Deep Gold')
+    expect(entry!.name).toBe('Crimson')
     expect(entry!.bg).toBe('#9B2335')
   })
 
@@ -251,9 +251,9 @@ describe('COLOR_LEGEND correctness', () => {
     expect(entry!.bg).toBe('#EEE4DA')
   })
 
-  it('2048 tile maps to "Deep Green" (#1C3461)', () => {
+  it('2048 tile maps to "Navy Blue" (#1C3461)', () => {
     const entry = COLOR_LEGEND.find(e => e.value === 2048)
-    expect(entry!.name).toBe('Deep Green')
+    expect(entry!.name).toBe('Navy Blue')
     expect(entry!.bg).toBe('#1C3461')
   })
 
