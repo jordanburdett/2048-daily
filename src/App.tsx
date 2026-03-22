@@ -80,6 +80,8 @@ function initMode(): { mode: Mode; dailyResult: DailyResult | null } {
     if (decoded !== null) {
       pendingCustomHash = hashStr
     }
+    // Always clear the hash fragment regardless of whether decoding succeeded
+    history.replaceState(null, '', window.location.pathname)
   }
   return { mode: 'select', dailyResult: result }
 }
@@ -277,12 +279,13 @@ export default function App() {
     }
   }
 
-  // Apply pending URL hash on first render (set during initMode before React mounted)
+  // Apply pending URL hash on first render (set during initMode before React mounted).
+  // The hash fragment is already cleared by initMode unconditionally, so we only
+  // need to trigger the game transition here.
   useEffect(() => {
     if (pendingCustomHash) {
       handleArchitectPlay(pendingCustomHash)
       pendingCustomHash = null
-      history.replaceState(null, '', window.location.pathname)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

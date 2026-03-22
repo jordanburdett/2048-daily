@@ -50,6 +50,8 @@ export default function ArchitectBoard({ onPlay, onBack }: ArchitectBoardProps) 
   const [grid, setGrid] = useState<number[]>(Array(16).fill(0))
   const [copyFeedback, setCopyFeedback] = useState(false)
 
+  const isEmpty = grid.every(v => v === 0)
+
   const cycleCell = (index: number) => {
     setGrid(prev => {
       const next = [...prev]
@@ -89,7 +91,9 @@ export default function ArchitectBoard({ onPlay, onBack }: ArchitectBoardProps) 
       </button>
 
       <h1 style={styles.title}>Architect Mode</h1>
-      <p style={styles.subtitle}>Design a custom 2048 board</p>
+      <p style={styles.subtitle}>
+        {isEmpty ? 'Tap cells to add tiles' : 'Design a custom 2048 board'}
+      </p>
 
       {/* 4×4 grid */}
       <div
@@ -117,9 +121,11 @@ export default function ArchitectBoard({ onPlay, onBack }: ArchitectBoardProps) 
       {/* Action buttons */}
       <div style={styles.actionRow}>
         <button
-          style={styles.playButton}
+          style={{ ...styles.playButton, ...(isEmpty ? styles.playButtonDisabled : {}) }}
           onClick={handlePlay}
+          disabled={isEmpty}
           aria-label="Play with this custom board"
+          aria-disabled={isEmpty}
         >
           Play
         </button>
@@ -229,6 +235,12 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontFamily: 'inherit',
     minWidth: '140px',
+  },
+  playButtonDisabled: {
+    background: '#4a5568',
+    color: '#888',
+    cursor: 'not-allowed',
+    opacity: 0.6,
   },
   shareButton: {
     background: '#2980b9',
