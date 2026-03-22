@@ -23,12 +23,28 @@ function getTileColor(value: number): { bg: string; fg: string } {
 }
 
 interface ResultCardProps {
-  result: DailyResult
+  result: DailyResult | null
   onPlayClassic: () => void
+  // Blindfold-specific
+  isBlindfold?: boolean
+  onPlayBlindfold?: () => void
+  bestTile?: number
+  manualRevealsUsed?: number
+  autoRevealsReceived?: number
+  badgeEarned?: boolean
 }
 
-export default function ResultCard({ result, onPlayClassic }: ResultCardProps) {
-  const emojis = result.emojiCard ? [...result.emojiCard] : []
+export default function ResultCard({
+  result,
+  onPlayClassic,
+  isBlindfold,
+  onPlayBlindfold,
+  bestTile = 0,
+  manualRevealsUsed = 0,
+  autoRevealsReceived = 0,
+  badgeEarned = false,
+}: ResultCardProps) {
+  const emojis = result?.emojiCard ? [...result.emojiCard] : []
   const [revealedCount, setRevealedCount] = useState(0)
   const [copyFeedback, setCopyFeedback] = useState(false)
 
@@ -46,9 +62,10 @@ export default function ResultCard({ result, onPlayClassic }: ResultCardProps) {
     handle = setTimeout(reveal, 400)
     return () => clearTimeout(handle)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result.emojiCard])
+  }, [result?.emojiCard])
 
   const handleShare = async () => {
+    if (!result) return
     const text = buildShareText(
       result.challengeNumber,
       result.score,
@@ -63,6 +80,88 @@ export default function ResultCard({ result, onPlayClassic }: ResultCardProps) {
     setCopyFeedback(true)
     setTimeout(() => setCopyFeedback(false), 2000)
   }
+
+  // -----------------------------------------------------------------------
+  // Blindfold result view
+  // -----------------------------------------------------------------------
+  if (isBlindfold) {
+    const tileColors = bestTile > 0 ? getTileColor(bestTile) : FALLBACK_TILE
+    return (
+      <div style={styles.page} role="dialog" aria-label="Blindfold game result">
+        <div style={styles.card}>
+          <h1 style={styles.title}>2048 Daily</h1>
+
+          {/* Blindfold header badge */}
+          <div style={styles.blindfoldHeader}>
+            <span style={styles.blindfoldIcon}>🙈</span>
+            <span style={styles.blindfoldHeaderText}>Blindfold Mode</span>
+          </div>
+
+          {/* Best tile */}
+          <div style={styles.statsRow}>
+            <div style={styles.statBox}>
+              <span style={styles.statLabel}>Highest tile</span>
+              <span
+                style={{
+                  ...styles.statValue,
+                  background: tileColors.bg,
+                  color: tileColors.fg,
+                  borderRadius: '6px',
+                  padding: '4px 14px',
+                }}
+              >
+                {bestTile > 0 ? bestTile : '—'}
+              </span>
+            </div>
+            <div style={styles.statBox}>
+              <span style={styles.statLabel}>Manual reveals</span>
+              <span style={styles.statValue}>{manualRevealsUsed}/3</span>
+            </div>
+            <div style={styles.statBox}>
+              <span style={styles.statLabel}>Auto-reveals</span>
+              <span style={styles.statValue}>{autoRevealsReceived}</span>
+            </div>
+          </div>
+
+          {/* Badge earned */}
+          {badgeEarned && (
+            <div style={styles.badgeEarned} aria-label="Blindfold Master badge earned">
+              <span style={{ fontSize: '1.8rem' }}>🏅</span>
+              <span style={styles.badgeEarnedText}>Blindfold Master earned!</span>
+            </div>
+          )}
+
+          {/* Badge criteria */}
+          <div style={styles.badgeCriteria}>
+            <span style={styles.badgeCriteriaText}>
+              Badge: Reach 512 with ≤1 manual reveal
+            </span>
+          </div>
+
+          {/* Play again buttons */}
+          <button
+            style={styles.primaryButton}
+            onClick={onPlayBlindfold}
+            aria-label="Play Blindfold again"
+          >
+            Play Again
+          </button>
+          <button
+            style={styles.classicButton}
+            onClick={onPlayClassic}
+            aria-label="Play Classic Mode"
+          >
+            Play Classic
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // -----------------------------------------------------------------------
+  // Daily challenge result view
+  // -----------------------------------------------------------------------
+  if (!result) return null
 
   const tileColors = result.bestTile > 0 ? getTileColor(result.bestTile) : FALLBACK_TILE
 
@@ -172,6 +271,22 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontWeight: 600,
   },
+  blindfoldHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: '#6c3483',
+    borderRadius: '10px',
+    padding: '8px 20px',
+  },
+  blindfoldIcon: {
+    fontSize: '1.4rem',
+  },
+  blindfoldHeaderText: {
+    color: '#fff',
+    fontSize: '1.1rem',
+    fontWeight: 700,
+  },
   emojiRow: {
     display: 'flex',
     gap: '12px',
@@ -190,8 +305,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statsRow: {
     display: 'flex',
-    gap: '24px',
+    gap: '20px',
     justifyContent: 'center',
+    flexWrap: 'wrap',
   },
   statBox: {
     display: 'flex',
@@ -212,6 +328,37 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     lineHeight: 1.2,
   },
+  badgeEarned: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    background: 'rgba(212, 160, 23, 0.15)',
+    border: '1px solid #d4a017',
+    borderRadius: '10px',
+    padding: '10px 20px',
+    width: '100%',
+    boxSizing: 'border-box',
+    justifyContent: 'center',
+  },
+  badgeEarnedText: {
+    color: '#d4a017',
+    fontWeight: 700,
+    fontSize: '1rem',
+  },
+  badgeCriteria: {
+    background: 'rgba(108, 52, 131, 0.15)',
+    border: '1px solid #6c3483',
+    borderRadius: '8px',
+    padding: '8px 16px',
+    width: '100%',
+    boxSizing: 'border-box',
+    textAlign: 'center',
+  },
+  badgeCriteriaText: {
+    color: '#b07ad4',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+  },
   shareButton: {
     background: '#2980b9',
     color: '#fff',
@@ -224,6 +371,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
     width: '100%',
     transition: 'background 0.15s',
+  },
+  primaryButton: {
+    background: '#6c3483',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 32px',
+    fontSize: '1rem',
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    width: '100%',
   },
   classicButton: {
     background: 'transparent',

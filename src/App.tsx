@@ -17,7 +17,16 @@ import { AudioEngine } from './utils/AudioEngine'
 import { GameStatus } from './game/types'
 import type { GameState } from './game/types'
 
-type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold'
+type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold' | 'blindfold-result'
+
+const BLINDFOLD_BADGE_KEY = '2048-blindfold-badge'
+
+export interface BlindBadge {
+  earned: boolean
+  bestTile: number
+  revealsUsed: number
+  date: string
+}
 
 function getClassicBest(): number {
   try {
@@ -25,6 +34,32 @@ function getClassicBest(): number {
   } catch {
     return 0
   }
+}
+
+function loadBlindBadge(): BlindBadge | null {
+  try {
+    const raw = localStorage.getItem(BLINDFOLD_BADGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as BlindBadge
+  } catch {
+    return null
+  }
+}
+
+function saveBlindBadge(badge: BlindBadge): void {
+  try {
+    localStorage.setItem(BLINDFOLD_BADGE_KEY, JSON.stringify(badge))
+  } catch {
+    // ignore
+  }
+}
+
+function getTodayDateString(): string {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 function initMode(): { mode: Mode; dailyResult: DailyResult | null } {
@@ -49,6 +84,15 @@ export default function App() {
   const [isRevealing, setIsRevealing] = useState(false)
   const [autoRevealCountdown, setAutoRevealCountdown] = useState(30)
 
+  // Blindfold stats tracking
+  const [manualRevealsUsed, setManualRevealsUsed] = useState(0)
+  const [autoRevealsReceived, setAutoRevealsReceived] = useState(0)
+  const [blindfoldBestTile, setBlindfoldBestTile] = useState(0)
+  const [badgeEarnedThisGame, setBadgeEarnedThisGame] = useState(false)
+
+  // Persistent badge loaded from localStorage
+  const [blindfoldBadge, setBlindfoldBadge] = useState<BlindBadge | null>(() => loadBlindBadge())
+
   // Keep a stable ref to setIsRevealing so it's safe to call inside the
   // setAutoRevealCountdown functional updater without creating a stale closure.
   const setIsRevealingRef = useRef(setIsRevealing)
@@ -64,6 +108,7 @@ export default function App() {
       setAutoRevealCountdown(prev => {
         if (prev <= 1) {
           setIsRevealingRef.current(true)
+          setAutoRevealsReceived(n => n + 1)
           setTimeout(() => setIsRevealingRef.current(false), 2000)
           return 30
         }
@@ -72,6 +117,46 @@ export default function App() {
     }, 1000)
     return () => clearInterval(interval)
   }, [mode, engine])
+
+  // Detect blindfold game end (GAME_OVER or WON) and show result
+  const blindfoldGameEndFired = useRef(false)
+  useEffect(() => {
+    if (mode !== 'blindfold') return
+    const checkInterval = setInterval(() => {
+      const state = engine.getState()
+      if (
+        (state.status === GameStatus.GAME_OVER || state.status === GameStatus.WON) &&
+        !blindfoldGameEndFired.current
+      ) {
+        blindfoldGameEndFired.current = true
+        const bestTile = Math.max(...state.grid)
+        const finalManualRevealsUsed = 3 - revealsRemaining
+        setBlindfoldBestTile(bestTile)
+
+        // Badge logic: reach 512 with ≤1 manual reveal
+        const earnedBadge = bestTile >= 512 && finalManualRevealsUsed <= 1
+        setBadgeEarnedThisGame(earnedBadge)
+        if (earnedBadge) {
+          const badge: BlindBadge = {
+            earned: true,
+            bestTile,
+            revealsUsed: finalManualRevealsUsed,
+            date: getTodayDateString(),
+          }
+          saveBlindBadge(badge)
+          setBlindfoldBadge(badge)
+        }
+
+        // Show result after a short delay so the game-over overlay renders
+        setTimeout(() => {
+          engine.setBlindMode(false)
+          setIsRevealing(false)
+          setMode('blindfold-result')
+        }, 1400)
+      }
+    }, 200)
+    return () => clearInterval(checkInterval)
+  }, [mode, engine, revealsRemaining])
 
   // Read best score directly during render — localStorage is synchronous and safe here
   const classicBest = mode === 'select' ? getClassicBest() : 0
@@ -82,11 +167,17 @@ export default function App() {
     setRevealsRemaining(3)
     setIsRevealing(true)
     setAutoRevealCountdown(30)
+    setManualRevealsUsed(0)
+    setAutoRevealsReceived(0)
+    setBlindfoldBestTile(0)
+    setBadgeEarnedThisGame(false)
+    blindfoldGameEndFired.current = false
     setTimeout(() => setIsRevealing(false), 1500)
     setMode('blindfold')
   }
 
   const handleReveal = () => {
+    setManualRevealsUsed(n => n + 1)
     setRevealsRemaining(r => r - 1)
     setIsRevealing(true)
     setAutoRevealCountdown(30)
@@ -150,6 +241,21 @@ export default function App() {
     )
   }
 
+  if (mode === 'blindfold-result') {
+    return (
+      <ResultCard
+        result={null}
+        onPlayClassic={handlePlayClassicFromResult}
+        onPlayBlindfold={() => handleSelectBlindfold()}
+        isBlindfold
+        bestTile={blindfoldBestTile}
+        manualRevealsUsed={manualRevealsUsed}
+        autoRevealsReceived={autoRevealsReceived}
+        badgeEarned={badgeEarnedThisGame}
+      />
+    )
+  }
+
   if (mode === 'classic' || mode === 'daily' || mode === 'blindfold') {
     const hideNumbers = mode === 'blindfold' && !isRevealing
     return (
@@ -162,6 +268,7 @@ export default function App() {
           if (mode === 'blindfold') {
             engine.setBlindMode(false)
             setIsRevealing(false)
+            blindfoldGameEndFired.current = false
           }
           handleBackFromGame()
         }}
@@ -200,6 +307,7 @@ export default function App() {
       }}
       onSelectDaily={handleSelectDaily}
       onSelectBlindfold={handleSelectBlindfold}
+      blindfoldBadgeEarned={blindfoldBadge?.earned === true}
     />
   )
 }
