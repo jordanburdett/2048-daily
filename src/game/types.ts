@@ -21,4 +21,5 @@ export interface GameState {
   status: GameStatus
   canUndo: boolean
   moveCount: number
+  isDaily: boolean
 }

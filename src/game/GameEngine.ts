@@ -1,5 +1,6 @@
 import { Direction, GameStatus } from './types'
 import type { GameState } from './types'
+import type { TileSpawn } from './DailyChallenge'
 
 const CLASSIC_BEST_KEY = '2048-classic-best'
 const CLASSIC_BEST_TILE_KEY = '2048-classic-best-tile'
@@ -25,6 +26,8 @@ export class GameEngine {
   private prevGrid: number[] | null = null
   private prevScore: number = 0
   private readonly spawnRandom: () => number
+  private dailySequence: TileSpawn[] = []
+  private dailyIndex: number = 0
 
   constructor(spawnRandom?: () => number) {
     this.spawnRandom = spawnRandom ?? Math.random
@@ -42,6 +45,7 @@ export class GameEngine {
       status: GameStatus.PLAYING,
       canUndo: false,
       moveCount: 0,
+      isDaily: false,
     }
   }
 
@@ -58,6 +62,27 @@ export class GameEngine {
       status: GameStatus.PLAYING,
       canUndo: false,
       moveCount: 0,
+      isDaily: false,
+    }
+    this.spawnTile()
+    this.spawnTile()
+  }
+
+  startDaily(sequence: TileSpawn[]): void {
+    this.dailySequence = [...sequence]
+    this.dailyIndex = 0
+    const bestScore = parseInt(safeGetItem(CLASSIC_BEST_KEY) ?? '0', 10) || 0
+    this.prevGrid = null
+    this.prevScore = 0
+    this.state = {
+      grid: new Array<number>(16).fill(0),
+      score: 0,
+      bestScore,
+      bestTile: 0,
+      status: GameStatus.PLAYING,
+      canUndo: false,
+      moveCount: 0,
+      isDaily: true,
     }
     this.spawnTile()
     this.spawnTile()
@@ -178,10 +203,19 @@ export class GameEngine {
     }
     if (emptyCells.length === 0) return
 
-    const r1 = this.spawnRandom()
-    const cellIndex = emptyCells[Math.floor(r1 * emptyCells.length)]
-    const r2 = this.spawnRandom()
-    const value = r2 < 0.9 ? 2 : 4
+    let cellIndex: number
+    let value: number
+
+    if (this.state.isDaily && this.dailyIndex < this.dailySequence.length) {
+      const spawn = this.dailySequence[this.dailyIndex++]
+      value = spawn.value
+      cellIndex = emptyCells[Math.floor(spawn.flatIndex * emptyCells.length)]
+    } else {
+      const r1 = this.spawnRandom()
+      cellIndex = emptyCells[Math.floor(r1 * emptyCells.length)]
+      const r2 = this.spawnRandom()
+      value = r2 < 0.9 ? 2 : 4
+    }
 
     const newGrid = [...grid]
     newGrid[cellIndex] = value

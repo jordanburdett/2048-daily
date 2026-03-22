@@ -33,39 +33,47 @@ function getTileFontSize(value: number): string {
 
 interface GameBoardProps {
   mode: 'classic' | 'daily'
+  engine: GameEngine
   onBack: () => void
+  onDailyGameOver?: (state: GameState) => void
 }
 
-export default function GameBoard({ mode, onBack }: GameBoardProps) {
-  // Single engine instance — both useState calls use the same object.
-  // The first initializer creates the engine; the second reads its initial state.
-  // Neither reads a ref during render, satisfying the react-hooks/refs lint rule.
-  const [engineHolder] = useState<GameEngine>(() => {
-    const eng = new GameEngine()
-    eng.newGame()
-    return eng
-  })
-  const [gameState, setGameState] = useState<GameState>(() => engineHolder.getState())
+export default function GameBoard({ mode, engine, onBack, onDailyGameOver }: GameBoardProps) {
+  const [gameState, setGameState] = useState<GameState>(() => engine.getState())
+  // Track whether we've already fired the daily game-over callback
+  const dailyOverFired = useRef(false)
 
   const syncState = useCallback(() => {
-    setGameState(engineHolder.getState())
-  }, [engineHolder])
+    const s = engine.getState()
+    setGameState(s)
+    if (
+      mode === 'daily' &&
+      s.status === GameStatus.GAME_OVER &&
+      !dailyOverFired.current &&
+      onDailyGameOver
+    ) {
+      dailyOverFired.current = true
+      // Small delay to let the game-over overlay render first
+      setTimeout(() => onDailyGameOver(s), 1200)
+    }
+  }, [engine, mode, onDailyGameOver])
 
   const handleMove = useCallback((dir: Direction) => {
     if (gameState.status !== GameStatus.PLAYING) return
-    engineHolder.move(dir)
+    engine.move(dir)
     syncState()
-  }, [gameState.status, engineHolder, syncState])
+  }, [gameState.status, engine, syncState])
 
   const handleNewGame = useCallback(() => {
-    engineHolder.newGame()
+    engine.newGame()
+    dailyOverFired.current = false
     syncState()
-  }, [engineHolder, syncState])
+  }, [engine, syncState])
 
   const handleUndo = useCallback(() => {
-    engineHolder.undo()
+    engine.undo()
     syncState()
-  }, [engineHolder, syncState])
+  }, [engine, syncState])
 
   // Keyboard listener
   useEffect(() => {
@@ -142,11 +150,13 @@ export default function GameBoard({ mode, onBack }: GameBoardProps) {
         </div>
       </div>
 
-      {/* Action buttons */}
+      {/* Action buttons — hide New Game in daily mode */}
       <div style={styles.actions}>
-        <button style={styles.actionBtn} onClick={handleNewGame} aria-label="New game">
-          New Game
-        </button>
+        {mode !== 'daily' && (
+          <button style={styles.actionBtn} onClick={handleNewGame} aria-label="New game">
+            New Game
+          </button>
+        )}
         <button
           style={{ ...styles.actionBtn, opacity: gameState.canUndo ? 1 : 0.4 }}
           onClick={handleUndo}
@@ -200,9 +210,11 @@ export default function GameBoard({ mode, onBack }: GameBoardProps) {
           <div role="dialog" aria-label="Game over" style={styles.overlay}>
             <span style={styles.overlayTitle}>Game Over!</span>
             <span style={styles.overlayScore}>Score: {gameState.score.toLocaleString()}</span>
-            <button style={styles.overlayBtn} onClick={handleNewGame}>
-              Play Again
-            </button>
+            {mode !== 'daily' && (
+              <button style={styles.overlayBtn} onClick={handleNewGame}>
+                Play Again
+              </button>
+            )}
           </div>
         )}
       </div>

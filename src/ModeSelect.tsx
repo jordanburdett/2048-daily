@@ -1,24 +1,16 @@
+import { getChallengeNumber, loadDailyResult } from './game/DailyChallenge'
+
 interface ModeSelectProps {
   classicBest: number
+  dailyBlocked: boolean
   onSelectClassic: () => void
   onSelectDaily: () => void
 }
 
-function getChallengeNumber(): number {
-  return 1
-}
-
-function isDailyCompleted(): boolean {
-  try {
-    return localStorage.getItem('2048-daily-completed-1') === 'true'
-  } catch {
-    return false
-  }
-}
-
-export default function ModeSelect({ classicBest, onSelectClassic, onSelectDaily }: ModeSelectProps) {
+export default function ModeSelect({ classicBest, dailyBlocked, onSelectClassic, onSelectDaily }: ModeSelectProps) {
   const challengeNum = getChallengeNumber()
-  const dailyCompleted = isDailyCompleted()
+  const dailyResult = loadDailyResult()
+  const emojiPreview = dailyResult?.emojiCard || ''
 
   return (
     <div style={styles.container}>
@@ -41,17 +33,26 @@ export default function ModeSelect({ classicBest, onSelectClassic, onSelectDaily
         </button>
 
         <button
-          style={{ ...styles.modeButton, ...styles.dailyButton }}
-          onClick={onSelectDaily}
-          aria-label="Play Daily Challenge"
+          style={{
+            ...styles.modeButton,
+            ...styles.dailyButton,
+            opacity: dailyBlocked ? 0.65 : 1,
+            cursor: dailyBlocked ? 'default' : 'pointer',
+          }}
+          onClick={dailyBlocked ? undefined : onSelectDaily}
+          disabled={dailyBlocked}
+          aria-label={dailyBlocked ? 'Daily Challenge already completed' : 'Play Daily Challenge'}
         >
           <span style={styles.modeName}>Daily Challenge</span>
           <span style={styles.modeDetail}>
             #{challengeNum}
-            {dailyCompleted && (
+            {dailyBlocked && (
               <span style={styles.completedBadge}> Completed</span>
             )}
           </span>
+          {emojiPreview.length > 0 && (
+            <span style={styles.emojiPreview}>{emojiPreview}</span>
+          )}
         </button>
       </div>
 
@@ -129,6 +130,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     fontWeight: 700,
     marginLeft: '4px',
+  },
+  emojiPreview: {
+    fontSize: '1.2rem',
+    letterSpacing: '2px',
   },
   hint: {
     color: '#6b6b8a',
