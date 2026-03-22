@@ -198,6 +198,7 @@ interface ModeSelectProps {
   onSelectClassic: () => void
   onSelectDaily: () => void
   onSelectBlindfold: () => void
+  onSelectArchitect: () => void
   blindfoldBadgeEarned?: boolean
 }
 
@@ -207,6 +208,7 @@ export default function ModeSelect({
   onSelectClassic,
   onSelectDaily,
   onSelectBlindfold,
+  onSelectArchitect,
   blindfoldBadgeEarned,
 }: ModeSelectProps) {
   const challengeNum = getChallengeNumber()
@@ -272,6 +274,15 @@ export default function ModeSelect({
             <ColorLegend />
           </div>
         </div>
+
+        <button
+          style={{ ...styles.modeButton, ...styles.architectButton }}
+          onClick={onSelectArchitect}
+          aria-label="Play Architect Mode — design and share a custom board"
+        >
+          <span style={styles.modeName}>Architect Mode</span>
+          <span style={styles.modeDetail}>Design &amp; share</span>
+        </button>
       </div>
 
       <p style={styles.hint}>Arrow keys to move · Undo to step back</p>
@@ -346,6 +357,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   blindfoldButton: {
     background: '#6c3483',
+    color: '#fff',
+  },
+  architectButton: {
+    background: '#1e8449',
     color: '#fff',
   },
   modeName: {

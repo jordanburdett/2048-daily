@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import ModeSelect from './ModeSelect'
 import GameBoard from './GameBoard'
 import ResultCard from './ResultCard'
+import ArchitectBoard from './ArchitectBoard'
 import {
   loadDailyResult,
   saveDailyResult,
@@ -17,7 +18,7 @@ import { AudioEngine } from './utils/AudioEngine'
 import { GameStatus } from './game/types'
 import type { GameState } from './game/types'
 
-type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold' | 'blindfold-result'
+type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold' | 'blindfold-result' | 'architect'
 
 const BLINDFOLD_BADGE_KEY = '2048-blindfold-badge'
 
@@ -256,6 +257,19 @@ export default function App() {
     )
   }
 
+  if (mode === 'architect') {
+    return (
+      <ArchitectBoard
+        onPlay={(hash) => {
+          // arch-003 will wire full custom play; for now return to select
+          console.debug('Architect play hash:', hash)
+          setMode('select')
+        }}
+        onBack={() => setMode('select')}
+      />
+    )
+  }
+
   if (mode === 'classic' || mode === 'daily' || mode === 'blindfold') {
     const hideNumbers = mode === 'blindfold' && !isRevealing
     return (
@@ -307,6 +321,7 @@ export default function App() {
       }}
       onSelectDaily={handleSelectDaily}
       onSelectBlindfold={handleSelectBlindfold}
+      onSelectArchitect={() => setMode('architect')}
       blindfoldBadgeEarned={blindfoldBadge?.earned === true}
     />
   )
