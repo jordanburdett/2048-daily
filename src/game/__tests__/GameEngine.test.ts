@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GameEngine } from '../GameEngine'
-import { Direction } from '../types'
+import { Direction, GameStatus } from '../types'
 
 // Mock localStorage
 const store: Record<string, string> = {}
@@ -215,5 +215,143 @@ describe('GameEngine', () => {
     engine.setBlindMode(true)
     engine.startDaily([])
     expect(engine.getState().blindMode).toBe(false)
+  })
+
+  describe('startCustom()', () => {
+    it('sets the grid to exactly the preset — no extra tiles spawned', () => {
+      const preset = [
+        2, 4, 8, 16,
+        32, 64, 128, 256,
+        512, 1024, 0, 0,
+        0, 0, 0, 0,
+      ]
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      const { grid } = engine.getState()
+      expect(grid).toEqual(preset)
+    })
+
+    it('does not spawn any tile on an all-zero preset', () => {
+      const preset = new Array<number>(16).fill(0)
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      const { grid } = engine.getState()
+      expect(grid).toEqual(preset)
+      expect(grid.every(v => v === 0)).toBe(true)
+    })
+
+    it('sets bestTile to Math.max of the preset values', () => {
+      const preset = [
+        2, 0, 0, 0,
+        0, 512, 0, 0,
+        0, 0, 1024, 0,
+        0, 0, 0, 256,
+      ]
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      const { bestTile } = engine.getState()
+      expect(bestTile).toBe(1024)
+    })
+
+    it('sets bestTile to 0 for an all-zero preset', () => {
+      const preset = new Array<number>(16).fill(0)
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      expect(engine.getState().bestTile).toBe(0)
+    })
+
+    it('sets bestTile to the single non-zero value when only one tile exists', () => {
+      const preset = new Array<number>(16).fill(0)
+      preset[7] = 2048
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      expect(engine.getState().bestTile).toBe(2048)
+    })
+
+    it('sets score to 0 regardless of preset values', () => {
+      const preset = [
+        2048, 1024, 512, 256,
+        128, 64, 32, 16,
+        8, 4, 2, 0,
+        0, 0, 0, 0,
+      ]
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      expect(engine.getState().score).toBe(0)
+    })
+
+    it('sets status to PLAYING', () => {
+      const preset = new Array<number>(16).fill(0)
+      preset[0] = 4
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      const { status } = engine.getState()
+      expect(status).toBe(GameStatus.PLAYING)
+    })
+
+    it('sets isDaily to false', () => {
+      const preset = new Array<number>(16).fill(0)
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      expect(engine.getState().isDaily).toBe(false)
+    })
+
+    it('sets blindMode to false even when engine.blindMode is true', () => {
+      const preset = new Array<number>(16).fill(0)
+      preset[0] = 2
+      const engine = new GameEngine()
+      engine.setBlindMode(true)
+      engine.startCustom(preset)
+      expect(engine.getState().blindMode).toBe(false)
+    })
+
+    it('sets canUndo to false after startCustom', () => {
+      const preset = new Array<number>(16).fill(0)
+      preset[0] = 16
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      expect(engine.getState().canUndo).toBe(false)
+    })
+
+    it('preserves bestScore from localStorage', () => {
+      store['2048-classic-best'] = '9999'
+      const preset = [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      expect(engine.getState().bestScore).toBe(9999)
+    })
+
+    it('grid is a copy — mutating the preset after the call does not affect engine state', () => {
+      const preset = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      preset[0] = 9999
+      expect(engine.getState().grid[0]).toBe(2)
+    })
+
+    it('getState() grid is a copy — mutating returned grid does not affect engine', () => {
+      const preset = [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      const state = engine.getState()
+      state.grid[0] = 9999
+      expect(engine.getState().grid[0]).toBe(8)
+    })
+
+    it('a move after startCustom merges tiles correctly and spawns one new tile', () => {
+      // Two 4s at the left of row 0, rest zero
+      const preset = new Array<number>(16).fill(0)
+      preset[0] = 4
+      preset[1] = 4
+      const engine = new GameEngine()
+      engine.startCustom(preset)
+      engine.move(Direction.LEFT)
+      const { grid, score } = engine.getState()
+      expect(grid[0]).toBe(8)
+      expect(score).toBe(8)
+      // Exactly one new tile was spawned somewhere else on the board
+      const nonZero = grid.filter(v => v !== 0)
+      expect(nonZero).toHaveLength(2) // merged 8 + spawned tile
+    })
   })
 })
