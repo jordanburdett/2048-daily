@@ -17,8 +17,12 @@ import { GameEngine } from './game/GameEngine'
 import { AudioEngine } from './utils/AudioEngine'
 import { GameStatus } from './game/types'
 import type { GameState } from './game/types'
+import { decodeGridHash } from './utils/architectHash'
 
-type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold' | 'blindfold-result' | 'architect'
+type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold' | 'blindfold-result' | 'architect' | 'custom' | 'custom-result'
+
+// Module-level variable to hold a decoded URL hash preset before React mounts
+let pendingCustomHash: string | null = null
 
 const BLINDFOLD_BADGE_KEY = '2048-blindfold-badge'
 
@@ -68,6 +72,15 @@ function initMode(): { mode: Mode; dailyResult: DailyResult | null } {
   if (result && (result.played || result.attemptStarted)) {
     return { mode: 'daily-result', dailyResult: result }
   }
+  // Check for a custom board URL hash
+  const rawHash = window.location.hash
+  if (rawHash) {
+    const hashStr = rawHash.slice(1) // strip leading '#'
+    const decoded = decodeGridHash(hashStr)
+    if (decoded !== null) {
+      pendingCustomHash = hashStr
+    }
+  }
   return { mode: 'select', dailyResult: result }
 }
 
@@ -90,6 +103,9 @@ export default function App() {
   const [autoRevealsReceived, setAutoRevealsReceived] = useState(0)
   const [blindfoldBestTile, setBlindfoldBestTile] = useState(0)
   const [badgeEarnedThisGame, setBadgeEarnedThisGame] = useState(false)
+
+  // Custom board result state
+  const [customFinalState, setCustomFinalState] = useState<GameState | null>(null)
 
   // Persistent badge loaded from localStorage
   const [blindfoldBadge, setBlindfoldBadge] = useState<BlindBadge | null>(() => loadBlindBadge())
@@ -158,6 +174,27 @@ export default function App() {
     }, 200)
     return () => clearInterval(checkInterval)
   }, [mode, engine, revealsRemaining])
+
+  // Detect custom game end and show custom result card
+  const customGameEndFired = useRef(false)
+  useEffect(() => {
+    if (mode !== 'custom') return
+    customGameEndFired.current = false
+    const checkInterval = setInterval(() => {
+      const state = engine.getState()
+      if (
+        (state.status === GameStatus.GAME_OVER || state.status === GameStatus.WON) &&
+        !customGameEndFired.current
+      ) {
+        customGameEndFired.current = true
+        setTimeout(() => {
+          setCustomFinalState(state)
+          setMode('custom-result')
+        }, 1400)
+      }
+    }, 200)
+    return () => clearInterval(checkInterval)
+  }, [mode, engine])
 
   // Read best score directly during render — localStorage is synchronous and safe here
   const classicBest = mode === 'select' ? getClassicBest() : 0
@@ -228,6 +265,28 @@ export default function App() {
     setMode('select')
   }
 
+  const handleArchitectPlay = (hash: string) => {
+    const grid = decodeGridHash(hash)
+    if (grid === null) {
+      engine.newGame()
+      setMode('classic')
+    } else {
+      engine.startCustom(grid)
+      setCustomFinalState(null)
+      setMode('custom')
+    }
+  }
+
+  // Apply pending URL hash on first render (set during initMode before React mounted)
+  useEffect(() => {
+    if (pendingCustomHash) {
+      handleArchitectPlay(pendingCustomHash)
+      pendingCustomHash = null
+      history.replaceState(null, '', window.location.pathname)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handlePlayClassicFromResult = () => {
     engine.newGame()
     setMode('classic')
@@ -257,25 +316,43 @@ export default function App() {
     )
   }
 
+  if (mode === 'custom-result') {
+    const customResult: DailyResult | null = customFinalState
+      ? {
+          played: true,
+          attemptStarted: true,
+          score: customFinalState.score,
+          bestTile: customFinalState.bestTile,
+          challengeNumber: 0,
+          emojiCard: '',
+        }
+      : null
+    return (
+      <ResultCard
+        result={customResult}
+        onPlayClassic={handlePlayClassicFromResult}
+        isCustom
+        onCreateOwn={() => setMode('architect')}
+      />
+    )
+  }
+
   if (mode === 'architect') {
     return (
       <ArchitectBoard
-        onPlay={(hash) => {
-          // arch-003 will wire full custom play; for now return to select
-          console.debug('Architect play hash:', hash)
-          setMode('select')
-        }}
+        onPlay={handleArchitectPlay}
         onBack={() => setMode('select')}
       />
     )
   }
 
-  if (mode === 'classic' || mode === 'daily' || mode === 'blindfold') {
+  if (mode === 'classic' || mode === 'daily' || mode === 'blindfold' || mode === 'custom') {
     const hideNumbers = mode === 'blindfold' && !isRevealing
+    const isCustomMode = mode === 'custom'
     return (
       <GameBoard
         key={mode}
-        mode={mode === 'blindfold' ? 'classic' : mode}
+        mode={mode === 'blindfold' || isCustomMode ? 'classic' : mode}
         engine={engine}
         audio={audio}
         onBack={() => {
@@ -283,6 +360,9 @@ export default function App() {
             engine.setBlindMode(false)
             setIsRevealing(false)
             blindfoldGameEndFired.current = false
+          }
+          if (isCustomMode) {
+            customGameEndFired.current = false
           }
           handleBackFromGame()
         }}
@@ -294,6 +374,7 @@ export default function App() {
             : undefined
         }
         boardGlow={mode === 'blindfold' && isRevealing}
+        boardLabel={isCustomMode ? 'Custom Board' : undefined}
       />
     )
   }

@@ -86,12 +86,13 @@ interface GameBoardProps {
   hideNumbers?: boolean
   revealButton?: RevealButtonProps
   boardGlow?: boolean
+  boardLabel?: string
 }
 
 // ---------------------------------------------------------------------------
 // GameBoard component
 // ---------------------------------------------------------------------------
-export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver, hideNumbers, revealButton, boardGlow }: GameBoardProps) {
+export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver, hideNumbers, revealButton, boardGlow, boardLabel }: GameBoardProps) {
   const [gameState, setGameState] = useState<GameState>(() => engine.getState())
   const dailyOverFired = useRef(false)
 
@@ -270,6 +271,11 @@ export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver
           <h1 style={styles.title}>2048 Daily</h1>
           <span style={styles.modeLabel}>{modeLabel}</span>
         </div>
+
+        {/* Board label badge */}
+        {boardLabel && (
+          <div style={styles.boardLabelBadge}>{boardLabel}</div>
+        )}
 
         {/* HUD */}
         <div style={styles.hud}>
@@ -639,5 +645,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#888',
     fontSize: '0.75rem',
     lineHeight: 1,
+  },
+  boardLabelBadge: {
+    color: '#F59563',
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    marginBottom: '4px',
+    letterSpacing: '0.04em',
   },
 }

@@ -77,6 +77,27 @@ export class GameEngine {
     this.spawnTile()
   }
 
+  startCustom(preset: number[]): void {
+    const bestScore = parseInt(safeGetItem(CLASSIC_BEST_KEY) ?? '0', 10) || 0
+    this.prevGrid = null
+    this.prevScore = 0
+    this.state = {
+      grid: [...preset],
+      score: 0,
+      bestScore,
+      bestTile: Math.max(...preset),
+      status: GameStatus.PLAYING,
+      canUndo: false,
+      moveCount: 0,
+      isDaily: false,
+      mergedCells: [],
+      newTileIndex: null,
+      newHighScore: false,
+      blindMode: false,
+    }
+    // Do NOT call spawnTile — the preset board is the starting position
+  }
+
   startDaily(sequence: TileSpawn[]): void {
     this.dailySequence = [...sequence]
     this.dailyIndex = 0

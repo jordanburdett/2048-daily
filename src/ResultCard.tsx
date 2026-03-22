@@ -32,6 +32,9 @@ interface ResultCardProps {
   manualRevealsUsed?: number
   autoRevealsReceived?: number
   badgeEarned?: boolean
+  // Custom board-specific
+  isCustom?: boolean
+  onCreateOwn?: () => void
 }
 
 export default function ResultCard({
@@ -43,6 +46,8 @@ export default function ResultCard({
   manualRevealsUsed = 0,
   autoRevealsReceived = 0,
   badgeEarned = false,
+  isCustom = false,
+  onCreateOwn,
 }: ResultCardProps) {
   const emojis = result?.emojiCard ? [...result.emojiCard] : []
   const [revealedCount, setRevealedCount] = useState(0)
@@ -153,6 +158,65 @@ export default function ResultCard({
           >
             Play Classic
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  // -----------------------------------------------------------------------
+  // Custom board result view
+  // -----------------------------------------------------------------------
+  if (isCustom) {
+    const customBestTile = result?.bestTile ?? bestTile
+    const tileColorsCustom = customBestTile > 0 ? getTileColor(customBestTile) : FALLBACK_TILE
+    return (
+      <div style={styles.page} role="dialog" aria-label="Custom board result">
+        <div style={styles.card}>
+          <h1 style={styles.title}>2048 Daily</h1>
+          <div style={styles.customHeader}>
+            <span style={styles.customHeaderText}>Custom Board</span>
+          </div>
+
+          <div style={styles.statsRow}>
+            <div style={styles.statBox}>
+              <span style={styles.statLabel}>Best tile</span>
+              <span
+                style={{
+                  ...styles.statValue,
+                  background: tileColorsCustom.bg,
+                  color: tileColorsCustom.fg,
+                  borderRadius: '6px',
+                  padding: '4px 14px',
+                }}
+              >
+                {customBestTile > 0 ? customBestTile : '—'}
+              </span>
+            </div>
+            {result && (
+              <div style={styles.statBox}>
+                <span style={styles.statLabel}>Score</span>
+                <span style={styles.statValue}>{result.score.toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+
+          <button
+            style={styles.classicButton}
+            onClick={onPlayClassic}
+            aria-label="Play Classic Mode"
+          >
+            Play Classic
+          </button>
+
+          {onCreateOwn && (
+            <button
+              style={styles.createOwnButton}
+              onClick={onCreateOwn}
+              aria-label="Create your own custom board"
+            >
+              Create Your Own
+            </button>
+          )}
         </div>
       </div>
     )
@@ -392,6 +456,32 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 32px',
     fontSize: '0.95rem',
     fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    width: '100%',
+  },
+  customHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'rgba(30, 132, 73, 0.2)',
+    border: '1px solid #1e8449',
+    borderRadius: '10px',
+    padding: '8px 20px',
+  },
+  customHeaderText: {
+    color: '#2ecc71',
+    fontSize: '1.1rem',
+    fontWeight: 700,
+  },
+  createOwnButton: {
+    background: '#1e8449',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 32px',
+    fontSize: '1rem',
+    fontWeight: 700,
     cursor: 'pointer',
     fontFamily: 'inherit',
     width: '100%',
