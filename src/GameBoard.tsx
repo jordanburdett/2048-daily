@@ -70,18 +70,27 @@ function getMilestoneTier(
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
+interface RevealButtonProps {
+  revealsRemaining: number
+  isRevealing: boolean
+  onReveal: () => void
+}
+
 interface GameBoardProps {
   mode: 'classic' | 'daily'
   engine: GameEngine
   audio: AudioEngine
   onBack: () => void
   onDailyGameOver?: (state: GameState) => void
+  hideNumbers?: boolean
+  revealButton?: RevealButtonProps
+  boardGlow?: boolean
 }
 
 // ---------------------------------------------------------------------------
 // GameBoard component
 // ---------------------------------------------------------------------------
-export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver }: GameBoardProps) {
+export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver, hideNumbers, revealButton, boardGlow }: GameBoardProps) {
   const [gameState, setGameState] = useState<GameState>(() => engine.getState())
   const dailyOverFired = useRef(false)
 
@@ -310,6 +319,20 @@ export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver
           >
             Undo
           </button>
+          {revealButton && gameState.status === GameStatus.PLAYING && (
+            <button
+              style={{
+                ...styles.actionBtn,
+                background: '#6c3483',
+                opacity: revealButton.revealsRemaining === 0 || revealButton.isRevealing ? 0.4 : 1,
+              }}
+              onClick={revealButton.onReveal}
+              disabled={revealButton.revealsRemaining === 0 || revealButton.isRevealing}
+              aria-label={`Reveal tiles — ${revealButton.revealsRemaining} left`}
+            >
+              Reveal ({revealButton.revealsRemaining} left)
+            </button>
+          )}
         </div>
 
         {/* Grid */}
@@ -317,7 +340,10 @@ export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver
           role="grid"
           aria-label="2048 game board"
           className={boardShake ? 'board-shake' : undefined}
-          style={styles.gridWrapper}
+          style={{
+            ...styles.gridWrapper,
+            ...(boardGlow ? { boxShadow: '0 0 20px 4px rgba(255, 200, 0, 0.5)' } : {}),
+          }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -349,7 +375,7 @@ export default function GameBoard({ mode, engine, audio, onBack, onDailyGameOver
                   left: `calc(${col} * (var(--cell-size) + var(--gap)) + var(--gap))`,
                 }}
               >
-                {value}
+                {!hideNumbers && value > 0 ? value : ''}
               </div>
             )
           })}

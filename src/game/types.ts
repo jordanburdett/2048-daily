@@ -25,4 +25,5 @@ export interface GameState {
   mergedCells: number[]
   newTileIndex: number | null
   newHighScore: boolean
+  blindMode: boolean
 }

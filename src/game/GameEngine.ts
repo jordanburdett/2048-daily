@@ -28,6 +28,7 @@ export class GameEngine {
   private readonly spawnRandom: () => number
   private dailySequence: TileSpawn[] = []
   private dailyIndex: number = 0
+  blindMode: boolean = false
 
   constructor(spawnRandom?: () => number) {
     this.spawnRandom = spawnRandom ?? Math.random
@@ -49,6 +50,7 @@ export class GameEngine {
       mergedCells: [],
       newTileIndex: null,
       newHighScore: false,
+      blindMode: false,
     }
   }
 
@@ -69,6 +71,7 @@ export class GameEngine {
       mergedCells: [],
       newTileIndex: null,
       newHighScore: false,
+      blindMode: this.blindMode,
     }
     this.spawnTile()
     this.spawnTile()
@@ -92,6 +95,7 @@ export class GameEngine {
       mergedCells: [],
       newTileIndex: null,
       newHighScore: false,
+      blindMode: false,
     }
     this.spawnTile()
     this.spawnTile()
@@ -197,6 +201,11 @@ export class GameEngine {
       }
     }
     return false
+  }
+
+  setBlindMode(blind: boolean): void {
+    this.blindMode = blind
+    this.state = { ...this.state, blindMode: blind }
   }
 
   getState(): GameState {

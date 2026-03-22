@@ -188,4 +188,32 @@ describe('GameEngine', () => {
 
     expect(setItemSpy).toHaveBeenCalledWith('2048-classic-best', '2048')
   })
+
+  it('setBlindMode(true) sets blindMode on getState() snapshot', () => {
+    const engine = makeEngine()
+    expect(engine.getState().blindMode).toBe(false)
+    engine.setBlindMode(true)
+    expect(engine.getState().blindMode).toBe(true)
+  })
+
+  it('setBlindMode(false) clears blindMode on getState() snapshot', () => {
+    const engine = makeEngine()
+    engine.setBlindMode(true)
+    engine.setBlindMode(false)
+    expect(engine.getState().blindMode).toBe(false)
+  })
+
+  it('newGame() preserves blindMode from engine field', () => {
+    const engine = makeEngine()
+    engine.setBlindMode(true)
+    engine.newGame()
+    expect(engine.getState().blindMode).toBe(true)
+  })
+
+  it('startDaily() always sets blindMode=false', () => {
+    const engine = makeEngine()
+    engine.setBlindMode(true)
+    engine.startDaily([])
+    expect(engine.getState().blindMode).toBe(false)
+  })
 })

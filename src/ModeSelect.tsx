@@ -5,9 +5,10 @@ interface ModeSelectProps {
   dailyBlocked: boolean
   onSelectClassic: () => void
   onSelectDaily: () => void
+  onSelectBlindfold: () => void
 }
 
-export default function ModeSelect({ classicBest, dailyBlocked, onSelectClassic, onSelectDaily }: ModeSelectProps) {
+export default function ModeSelect({ classicBest, dailyBlocked, onSelectClassic, onSelectDaily, onSelectBlindfold }: ModeSelectProps) {
   const challengeNum = getChallengeNumber()
   const dailyResult = loadDailyResult()
   const emojiPreview = dailyResult?.emojiCard || ''
@@ -53,6 +54,15 @@ export default function ModeSelect({ classicBest, dailyBlocked, onSelectClassic,
           {emojiPreview.length > 0 && (
             <span style={styles.emojiPreview}>{emojiPreview}</span>
           )}
+        </button>
+
+        <button
+          style={{ ...styles.modeButton, ...styles.blindfoldButton }}
+          onClick={onSelectBlindfold}
+          aria-label="Play Blindfold Blitz mode"
+        >
+          <span style={styles.modeName}>Blindfold</span>
+          <span style={styles.modeDetail}>Color-only · 3 reveals</span>
         </button>
       </div>
 
@@ -112,6 +122,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   dailyButton: {
     background: '#2980b9',
+    color: '#fff',
+  },
+  blindfoldButton: {
+    background: '#6c3483',
     color: '#fff',
   },
   modeName: {

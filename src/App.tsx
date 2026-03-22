@@ -16,7 +16,7 @@ import { GameEngine } from './game/GameEngine'
 import { AudioEngine } from './utils/AudioEngine'
 import type { GameState } from './game/types'
 
-type Mode = 'select' | 'classic' | 'daily' | 'daily-result'
+type Mode = 'select' | 'classic' | 'daily' | 'daily-result' | 'blindfold'
 
 function getClassicBest(): number {
   try {
@@ -43,8 +43,27 @@ export default function App() {
   const [engine] = useState<GameEngine>(() => new GameEngine())
   const [audio] = useState(() => new AudioEngine())
 
+  // Blindfold mode state
+  const [revealsRemaining, setRevealsRemaining] = useState(3)
+  const [isRevealing, setIsRevealing] = useState(false)
+
   // Read best score directly during render — localStorage is synchronous and safe here
   const classicBest = mode === 'select' ? getClassicBest() : 0
+
+  const handleSelectBlindfold = () => {
+    engine.newGame()
+    engine.setBlindMode(true)
+    setRevealsRemaining(3)
+    setIsRevealing(true)
+    setTimeout(() => setIsRevealing(false), 1500)
+    setMode('blindfold')
+  }
+
+  const handleReveal = () => {
+    setRevealsRemaining(r => r - 1)
+    setIsRevealing(true)
+    setTimeout(() => setIsRevealing(false), 2000)
+  }
 
   const handleSelectDaily = () => {
     const challengeNumber = getChallengeNumber()
@@ -103,15 +122,29 @@ export default function App() {
     )
   }
 
-  if (mode === 'classic' || mode === 'daily') {
+  if (mode === 'classic' || mode === 'daily' || mode === 'blindfold') {
+    const hideNumbers = mode === 'blindfold' && !isRevealing
     return (
       <GameBoard
         key={mode}
-        mode={mode}
+        mode={mode === 'blindfold' ? 'classic' : mode}
         engine={engine}
         audio={audio}
-        onBack={handleBackFromGame}
+        onBack={() => {
+          if (mode === 'blindfold') {
+            engine.setBlindMode(false)
+            setIsRevealing(false)
+          }
+          handleBackFromGame()
+        }}
         onDailyGameOver={mode === 'daily' ? handleDailyGameOver : undefined}
+        hideNumbers={hideNumbers}
+        revealButton={
+          mode === 'blindfold'
+            ? { revealsRemaining, isRevealing, onReveal: handleReveal }
+            : undefined
+        }
+        boardGlow={mode === 'blindfold' && isRevealing}
       />
     )
   }
@@ -138,6 +171,7 @@ export default function App() {
         setMode('classic')
       }}
       onSelectDaily={handleSelectDaily}
+      onSelectBlindfold={handleSelectBlindfold}
     />
   )
 }
