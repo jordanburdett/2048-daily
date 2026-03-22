@@ -13,6 +13,7 @@ import {
 } from './game/DailyChallenge'
 import type { DailyResult } from './game/DailyChallenge'
 import { GameEngine } from './game/GameEngine'
+import { AudioEngine } from './utils/AudioEngine'
 import type { GameState } from './game/types'
 
 type Mode = 'select' | 'classic' | 'daily' | 'daily-result'
@@ -38,8 +39,9 @@ export default function App() {
   const [mode, setMode] = useState<Mode>(initialMode)
   const [dailyResult, setDailyResult] = useState<DailyResult | null>(initialResult)
 
-  // Single shared engine for the game board
+  // Single shared engine and audio for the game board
   const [engine] = useState<GameEngine>(() => new GameEngine())
+  const [audio] = useState(() => new AudioEngine())
 
   // Read best score directly during render — localStorage is synchronous and safe here
   const classicBest = mode === 'select' ? getClassicBest() : 0
@@ -107,6 +109,7 @@ export default function App() {
         key={mode}
         mode={mode}
         engine={engine}
+        audio={audio}
         onBack={handleBackFromGame}
         onDailyGameOver={mode === 'daily' ? handleDailyGameOver : undefined}
       />

@@ -46,6 +46,9 @@ export class GameEngine {
       canUndo: false,
       moveCount: 0,
       isDaily: false,
+      mergedCells: [],
+      newTileIndex: null,
+      newHighScore: false,
     }
   }
 
@@ -63,6 +66,9 @@ export class GameEngine {
       canUndo: false,
       moveCount: 0,
       isDaily: false,
+      mergedCells: [],
+      newTileIndex: null,
+      newHighScore: false,
     }
     this.spawnTile()
     this.spawnTile()
@@ -83,6 +89,9 @@ export class GameEngine {
       canUndo: false,
       moveCount: 0,
       isDaily: true,
+      mergedCells: [],
+      newTileIndex: null,
+      newHighScore: false,
     }
     this.spawnTile()
     this.spawnTile()
@@ -97,28 +106,35 @@ export class GameEngine {
 
     let changed = false
     let scoreGain = 0
+    const mergedCells: number[] = []
 
     const grid = [...this.state.grid]
 
     if (dir === Direction.LEFT || dir === Direction.RIGHT) {
       for (let row = 0; row < 4; row++) {
         const rowData = grid.slice(row * 4, row * 4 + 4)
-        const { result, score, moved } = processLine(rowData, dir === Direction.RIGHT)
+        const { result, score, moved, mergedIndices } = processLine(rowData, dir === Direction.RIGHT)
         if (moved) changed = true
         scoreGain += score
         for (let col = 0; col < 4; col++) {
           grid[row * 4 + col] = result[col]
+        }
+        for (const localIdx of mergedIndices) {
+          mergedCells.push(row * 4 + localIdx)
         }
       }
     } else {
       // UP or DOWN — process columns
       for (let col = 0; col < 4; col++) {
         const colData = [grid[col], grid[4 + col], grid[8 + col], grid[12 + col]]
-        const { result, score, moved } = processLine(colData, dir === Direction.DOWN)
+        const { result, score, moved, mergedIndices } = processLine(colData, dir === Direction.DOWN)
         if (moved) changed = true
         scoreGain += score
         for (let row = 0; row < 4; row++) {
           grid[row * 4 + col] = result[row]
+        }
+        for (const localIdx of mergedIndices) {
+          mergedCells.push(localIdx * 4 + col)
         }
       }
     }
@@ -132,10 +148,14 @@ export class GameEngine {
     const newScore = this.state.score + scoreGain
     const newBestTile = Math.max(this.state.bestTile, ...grid)
     let newBestScore = this.state.bestScore
+    let newHighScore = false
 
     if (newScore > this.state.bestScore) {
       newBestScore = newScore
-      if (!this.state.isDaily) safeSetItem(CLASSIC_BEST_KEY, String(newBestScore))
+      if (!this.state.isDaily) {
+        safeSetItem(CLASSIC_BEST_KEY, String(newBestScore))
+        newHighScore = true
+      }
     }
     if (newBestTile > this.state.bestTile) {
       if (!this.state.isDaily) safeSetItem(CLASSIC_BEST_TILE_KEY, String(newBestTile))
@@ -149,6 +169,9 @@ export class GameEngine {
       bestTile: newBestTile,
       canUndo: true,
       moveCount: this.state.moveCount + 1,
+      mergedCells,
+      newTileIndex: null,
+      newHighScore,
     }
 
     this.spawnTile()
@@ -180,6 +203,7 @@ export class GameEngine {
     return {
       ...this.state,
       grid: [...this.state.grid],
+      mergedCells: [...this.state.mergedCells],
     }
   }
 
@@ -191,6 +215,9 @@ export class GameEngine {
       score: this.prevScore,
       canUndo: false,
       status: GameStatus.PLAYING,
+      mergedCells: [],
+      newTileIndex: null,
+      newHighScore: false,
     }
     this.prevGrid = null
   }
@@ -219,31 +246,35 @@ export class GameEngine {
 
     const newGrid = [...grid]
     newGrid[cellIndex] = value
-    this.state = { ...this.state, grid: newGrid }
+    this.state = { ...this.state, grid: newGrid, newTileIndex: cellIndex }
   }
 }
 
 /**
  * Process a single line (row or column) in the given direction.
  * reverse=true means process right-to-left (for RIGHT and DOWN directions).
+ * Returns mergedIndices: flat indices (in the result array) of cells that
+ * received a merged value this move.
  */
 function processLine(
   line: number[],
   reverse: boolean,
-): { result: number[]; score: number; moved: boolean } {
+): { result: number[]; score: number; moved: boolean; mergedIndices: number[] } {
   const original = [...line]
   let arr = reverse ? [...line].reverse() : [...line]
 
   // Compact: remove zeros, push to left
   arr = compact(arr)
 
-  // Merge adjacent equal pairs
+  // Merge adjacent equal pairs; track which (compacted) positions had merges
   let score = 0
+  const mergedCompacted: number[] = []
   for (let i = 0; i < arr.length - 1; i++) {
     if (arr[i] !== 0 && arr[i] === arr[i + 1]) {
       arr[i] *= 2
       score += arr[i]
       arr[i + 1] = 0
+      mergedCompacted.push(i)
       i++ // skip next — can't chain merge
     }
   }
@@ -256,7 +287,17 @@ function processLine(
 
   const result = reverse ? arr.reverse() : arr
   const moved = result.some((v, i) => v !== original[i])
-  return { result, score, moved }
+
+  // Map compacted merge indices back to result indices.
+  // After second compact + pad, the merged tile is at position compactIdx in
+  // the left-packed array (length 4). When reversed, position compactIdx
+  // becomes (3 - compactIdx) in the final result.
+  const mergedInResult: number[] = mergedCompacted.map(compactIdx => {
+    if (reverse) return 3 - compactIdx
+    return compactIdx
+  })
+
+  return { result, score, moved, mergedIndices: mergedInResult }
 }
 
 function compact(arr: number[]): number[] {

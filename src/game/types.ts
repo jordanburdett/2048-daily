@@ -22,4 +22,7 @@ export interface GameState {
   canUndo: boolean
   moveCount: number
   isDaily: boolean
+  mergedCells: number[]
+  newTileIndex: number | null
+  newHighScore: boolean
 }
